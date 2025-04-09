@@ -25,6 +25,8 @@ ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 app = Flask(__name__)
 
 @app.route("/generate", methods=["POST"])
+with open("render_debug.log", "a", encoding="utf-8") as f:
+    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Запрос получен, чанков: {len(data.get('chunks', []))}\n")
 def generate():
     try:
         data = request.get_json()
@@ -118,4 +120,5 @@ def generate():
 
 
 if __name__ == "__main__":
+    print("🟢 Flask сервер запущен. Ожидаем запросы...")
     app.run(host="0.0.0.0", port=10000)
