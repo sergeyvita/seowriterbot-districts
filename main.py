@@ -31,8 +31,8 @@ def generate():
 		
         chunks = data.get("chunks", [])
 		
-		print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
-		print(f"📦 Количество чанков: {len(chunks)}")
+	print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
+	print(f"📦 Количество чанков: {len(chunks)}")
 		total_size = 0
 		for i, ch in enumerate(chunks):
 			ch_len = len(ch.encode('utf-8'))
@@ -48,7 +48,7 @@ def generate():
             chunk_text = str(chunk)
             chunk_len = len(chunk_text)
             total_chars += chunk_len
-            print(f"--- Чанк {i}: {chunk_len} символов ---")
+        print(f"--- Чанк {i}: {chunk_len} символов ---")
         print(f"Общий объём данных: {total_chars} символов ({total_chars / 1024:.2f} КБ)")
         print("=== КОНЕЦ АНАЛИЗА ЧАНКОВ ===")
 
@@ -98,9 +98,9 @@ def generate():
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         content = messages.data[0].content[0].text.value.strip()
 		
-		print("=== 📥 ОТВЕТ ОТ OPENAI ===")
-		print(content[:1000] + "\n...")  # первые 1000 символов
-		print("=== 🔚 ===")
+	print("=== 📥 ОТВЕТ ОТ OPENAI ===")
+	print(content[:1000] + "\n...")  # первые 1000 символов
+	print("=== 🔚 ===")
 
         def extract_block(tag):
             match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", content, re.DOTALL)
@@ -117,7 +117,7 @@ def generate():
         return jsonify(result)
 
     except Exception as e:
-		print(f"❌ ОШИБКА: {str(e)}")
+	print(f"❌ ОШИБКА: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
