@@ -25,13 +25,12 @@ ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 app = Flask(__name__)
 
 @app.route("/generate", methods=["POST"])
-with open("render_debug.log", "a", encoding="utf-8") as f:
-    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Запрос получен, чанков: {len(data.get('chunks', []))}\n")
 def generate():
     try:
         data = request.get_json()
         chunks = data.get("chunks", [])
 
+        print("📥 POST-запрос получен на /generate")
         print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
         print(f"📦 Количество чанков: {len(chunks)}")
         total_size = 0
@@ -41,6 +40,9 @@ def generate():
             print(f"🔹 Чанк {i}: {ch_len} байт")
         print(f"📏 Общий размер чанков: {total_size} байт")
         print("=== 🔚 ===\n")
+
+        with open("render_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Запрос получен, чанков: {len(chunks)}, размер: {total_size} байт\n")
 
         print("=== DISTRICT SEO BOT | АНАЛИЗ ЧАНКОВ ===")
         total_chars = 0
