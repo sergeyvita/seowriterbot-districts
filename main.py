@@ -33,22 +33,22 @@ def generate():
 		
 	print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
 	print(f"📦 Количество чанков: {len(chunks)}")
-		total_size = 0
-		for i, ch in enumerate(chunks):
-			ch_len = len(ch.encode('utf-8'))
-			total_size += ch_len
-			print(f"🔹 Чанк {i}: {ch_len} байт")
-		print(f"📏 Общий размер чанков: {total_size} байт")	
-		print("=== 🔚 ===\n")
+	total_size = 0
+	for i, ch in enumerate(chunks):
+	    ch_len = len(ch.encode('utf-8'))
+	    total_size += ch_len
+	    print(f"🔹 Чанк {i}: {ch_len} байт")
+	print(f"📏 Общий размер чанков: {total_size} байт")	
+	print("=== 🔚 ===\n")
 			
 		
-		print("=== DISTRICT SEO BOT | АНАЛИЗ ЧАНКОВ ===")
+	print("=== DISTRICT SEO BOT | АНАЛИЗ ЧАНКОВ ===")
         total_chars = 0
         for i, chunk in enumerate(chunks, 1):
             chunk_text = str(chunk)
             chunk_len = len(chunk_text)
             total_chars += chunk_len
-        print(f"--- Чанк {i}: {chunk_len} символов ---")
+            print(f"--- Чанк {i}: {chunk_len} символов ---")
         print(f"Общий объём данных: {total_chars} символов ({total_chars / 1024:.2f} КБ)")
         print("=== КОНЕЦ АНАЛИЗА ЧАНКОВ ===")
 
@@ -59,8 +59,8 @@ def generate():
 
         prompt = "\n\n".join(cleaned_chunks)
 		
-		print(f"📨 Отправка {len(cleaned_chunks)} чанков на OpenAI")
-		print(f"📏 Размер текста: {len(prompt.encode('utf-8'))} байт")
+	print(f"📨 Отправка {len(cleaned_chunks)} чанков на OpenAI")
+	print(f"📏 Размер текста: {len(prompt.encode('utf-8'))} байт")
 
         print("🔁 Создание потока")
         thread = client.beta.threads.create()
