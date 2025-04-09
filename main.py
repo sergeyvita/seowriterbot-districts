@@ -26,6 +26,8 @@ app = Flask(__name__)
 
 @app.route("/generate", methods=["POST"])
 def generate():
+    print("📥 POST-запрос получен на /generate")
+    
     try:
         data = request.get_json()
         chunks = data.get("chunks", [])
