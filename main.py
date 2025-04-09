@@ -103,6 +103,7 @@ def generate():
         print("=== 📥 ОТВЕТ ОТ OPENAI ===")
         print(content[:1000] + "\n...")  # первые 1000 символов
         print("=== 🔚 ===")
+        return jsonify(result)  # ✅ Возвращаем ответ
 
         def extract_block(tag):
             match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", content, re.DOTALL)
