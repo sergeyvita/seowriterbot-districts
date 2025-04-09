@@ -28,9 +28,21 @@ app = Flask(__name__)
 def generate():
     try:
         data = request.get_json()
+		
         chunks = data.get("chunks", [])
-
-        print("=== DISTRICT SEO BOT | АНАЛИЗ ЧАНКОВ ===")
+		
+		print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
+		print(f"📦 Количество чанков: {len(chunks)}")
+		total_size = 0
+		for i, ch in enumerate(chunks):
+			ch_len = len(ch.encode('utf-8'))
+			total_size += ch_len
+			print(f"🔹 Чанк {i}: {ch_len} байт")
+		print(f"📏 Общий размер чанков: {total_size} байт")	
+		print("=== 🔚 ===\n")
+			
+		
+		print("=== DISTRICT SEO BOT | АНАЛИЗ ЧАНКОВ ===")
         total_chars = 0
         for i, chunk in enumerate(chunks, 1):
             chunk_text = str(chunk)
@@ -46,6 +58,9 @@ def generate():
             cleaned_chunks.append(cleaned.strip())
 
         prompt = "\n\n".join(cleaned_chunks)
+		
+		print(f"📨 Отправка {len(cleaned_chunks)} чанков на OpenAI")
+		print(f"📏 Размер текста: {len(prompt.encode('utf-8'))} байт")
 
         print("🔁 Создание потока")
         thread = client.beta.threads.create()
@@ -71,6 +86,9 @@ def generate():
                 run_id=run.id
             )
             if run_status.status == "completed":
+			
+			print("✅ Ассистент завершил генерацию")
+						
                 break
             elif run_status.status == "failed":
                 raise Exception("Ассистент не справился с задачей.")
@@ -79,6 +97,10 @@ def generate():
         print("📬 Получение ответа ассистента")
         messages = client.beta.threads.messages.list(thread_id=thread.id)
         content = messages.data[0].content[0].text.value.strip()
+		
+		print("=== 📥 ОТВЕТ ОТ OPENAI ===")
+		print(content[:1000] + "\n...")  # первые 1000 символов
+		print("=== 🔚 ===")
 
         def extract_block(tag):
             match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", content, re.DOTALL)
@@ -95,6 +117,7 @@ def generate():
         return jsonify(result)
 
     except Exception as e:
+		print(f"❌ ОШИБКА: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
