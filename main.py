@@ -30,7 +30,20 @@ def generate():
     
     try:
         data = request.get_json()
+        if not data:
+            with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"\n❗ Нет JSON-данных в запросе от {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            return jsonify({"error": "Нет данных"}), 400
+            
         chunks = data.get("chunks", [])
+
+        with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"\n=== Новый запрос от {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+            f.write(f"Количество чанков: {len(chunks)}\n")
+            for i, chunk in enumerate(chunks):
+                f.write(f"--- Чанк {i} ---\n")
+                f.write(chunk[:1000] + "\n...\n")  # первые 1000 символов каждого чанка
+            
 
         print("📥 POST-запрос получен на /generate")
         print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
