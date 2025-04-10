@@ -77,6 +77,9 @@ def generate():
         print(f"Общий объём данных: {total_chars} символов ({total_chars / 1024:.2f} КБ)")
         print("=== КОНЕЦ АНАЛИЗА ЧАНКОВ ===")
 
+
+        
+
         cleaned_chunks = []
         for chunk in chunks:
             cleaned = re.sub(r'^https?://\S+\.(?:jpg|jpeg|png|gif)\s*$', '', chunk, flags=re.MULTILINE)
@@ -117,29 +120,28 @@ def generate():
             messages = client.beta.threads.messages.list(thread_id=thread.id)
             content = messages.data[0].content[0].text.value.strip()
 
-            def extract_block(tag):
-                match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", content, re.DOTALL)
+            def extract_block(tag, text):
+                match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", text, re.DOTALL)
                 return match.group(1).strip() if match else ""
 
             if i == 0:
-                generated_blocks["element_name"] = extract_block("ELEMENT_NAME")
-                generated_blocks["meta_title"] = extract_block("META_TITLE")
-                generated_blocks["meta_keywords"] = extract_block("META_KEYWORDS")
-                generated_blocks["meta_description"] = extract_block("META_DESCRIPTION")
-                generated_blocks["article_parts"].append(extract_block("ARTICLE"))
+                generated_blocks["element_name"] = extract_block("ELEMENT_NAME", content)
+                generated_blocks["meta_title"] = extract_block("META_TITLE", content)
+                generated_blocks["meta_keywords"] = extract_block("META_KEYWORDS", content)
+                generated_blocks["meta_description"] = extract_block("META_DESCRIPTION", content)
+                generated_blocks["article_parts"].append(extract_block("ARTICLE", content))
             else:
-                generated_blocks["article_parts"].append(content.strip())
+                generated_blocks["article_parts"].append(extract_block("ARTICLE", content))
                 
-        
+            # ⏸️ Пауза между чанками
+            time.sleep(5)
 
         print("=== 📥 ОТВЕТ ОТ OPENAI ===")
         print(content[:1000] + "\n...")  # первые 1000 символов
         print("=== 🔚 ===")
         
 
-        def extract_block(tag):
-            match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", content, re.DOTALL)
-            return match.group(1).strip() if match else ""
+        
 
         result = {
             "element_name": generated_blocks["element_name"],
@@ -148,7 +150,15 @@ def generate():
             "meta_description": generated_blocks["meta_description"],
             "article": "\n\n".join(generated_blocks["article_parts"])
         }
-
+        with open("render_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"\n=== Финальный результат от {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+            f.write(f"Название элемента: {result['element_name']}\n")
+            f.write(f"META TITLE: {result['meta_title']}\n")
+            f.write(f"META DESCRIPTION: {result['meta_description']}\n")
+            f.write(f"META KEYWORDS: {result['meta_keywords']}\n")
+            f.write("Тело статьи (первые 1000 символов):\n")
+            f.write(result["article"][:1000] + "\n...\n")
+            
         return jsonify(result)
 
     except Exception as e:
