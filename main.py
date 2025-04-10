@@ -37,6 +37,14 @@ def generate():
             
         chunks = data.get("chunks", [])
 
+        generated_blocks = {
+            "element_name": "",
+            "meta_title": "",
+            "meta_keywords": "",
+            "meta_description": "",
+            "article_parts": []
+        }    
+
         with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
             f.write(f"\n=== Новый запрос от {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
             f.write(f"Количество чанков: {len(chunks)}\n")
@@ -74,44 +82,55 @@ def generate():
             cleaned = re.sub(r'^https?://\S+\.(?:jpg|jpeg|png|gif)\s*$', '', chunk, flags=re.MULTILINE)
             cleaned_chunks.append(cleaned.strip())
 
-        prompt = "\n\n".join(cleaned_chunks)
-
-        print(f"📨 Отправка {len(cleaned_chunks)} чанков на OpenAI")
-        print(f"📏 Размер текста: {len(prompt.encode('utf-8'))} байт")
-
-        print("🔁 Создание потока")
-        thread = client.beta.threads.create()
-
-        print("📨 Отправка сообщения в поток")
-        client.beta.threads.messages.create(
-            thread_id=thread.id,
-            role="user",
-            content=prompt
-        )
-
-        print("🚀 Запуск ассистента")
-        run = client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=ASSISTANT_ID,
-            extra_headers={"OpenAI-Beta": "assistants=v2"}
-        )
-
-        print("⏳ Ожидание ответа от ассистента...")
-        while True:
-            run_status = client.beta.threads.runs.retrieve(
+        for i, chunk in enumerate(cleaned_chunks):
+            print(f"\n🔁 Создание потока для чанка {i}")
+            thread = client.beta.threads.create()
+            
+            print(f"📨 Отправка чанка {i}")
+            client.beta.threads.messages.create(
                 thread_id=thread.id,
-                run_id=run.id
+                role="user",
+                content=chunk
             )
-            if run_status.status == "completed":
-                print("✅ Ассистент завершил генерацию")
-                break
-            elif run_status.status == "failed":
-                raise Exception("Ассистент не справился с задачей.")
-            time.sleep(1)
 
-        print("📬 Получение ответа ассистента")
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
-        content = messages.data[0].content[0].text.value.strip()
+            print("🚀 Запуск ассистента")
+            run = client.beta.threads.runs.create(
+                thread_id=thread.id,
+                assistant_id=ASSISTANT_ID,
+                extra_headers={"OpenAI-Beta": "assistants=v2"}
+            )
+
+            print("⏳ Ожидание ответа от ассистента...")
+            while True:
+                run_status = client.beta.threads.runs.retrieve(
+                    thread_id=thread.id,
+                    run_id=run.id
+                )
+                if run_status.status == "completed":
+                    print("✅ Ассистент завершил генерацию")
+                    break
+                elif run_status.status == "failed":
+                    raise Exception(f"Ассистент не справился с задачей для чанка {i}")
+                time.sleep(1)
+
+            print("📬 Получение ответа от ассистента")
+            messages = client.beta.threads.messages.list(thread_id=thread.id)
+            content = messages.data[0].content[0].text.value.strip()
+
+            def extract_block(tag):
+                match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", content, re.DOTALL)
+                return match.group(1).strip() if match else ""
+
+            if i == 0:
+                generated_blocks["element_name"] = extract_block("ELEMENT_NAME")
+                generated_blocks["meta_title"] = extract_block("META_TITLE")
+                generated_blocks["meta_keywords"] = extract_block("META_KEYWORDS")
+                generated_blocks["meta_description"] = extract_block("META_DESCRIPTION")
+                generated_blocks["article_parts"].append(extract_block("ARTICLE"))
+            else:
+                generated_blocks["article_parts"].append(content.strip())
+                
+        
 
         print("=== 📥 ОТВЕТ ОТ OPENAI ===")
         print(content[:1000] + "\n...")  # первые 1000 символов
@@ -123,11 +142,11 @@ def generate():
             return match.group(1).strip() if match else ""
 
         result = {
-            "element_name": extract_block("ELEMENT_NAME"),
-            "meta_title": extract_block("META_TITLE"),
-            "meta_keywords": extract_block("META_KEYWORDS"),
-            "meta_description": extract_block("META_DESCRIPTION"),
-            "article": extract_block("ARTICLE")
+            "element_name": generated_blocks["element_name"],
+            "meta_title": generated_blocks["meta_title"],
+            "meta_keywords": generated_blocks["meta_keywords"],
+            "meta_description": generated_blocks["meta_description"],
+            "article": "\n\n".join(generated_blocks["article_parts"])
         }
 
         return jsonify(result)
