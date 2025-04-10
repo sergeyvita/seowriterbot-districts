@@ -11,7 +11,7 @@ os.environ.pop("HTTPS_PROXY", None)
 os.environ.pop("http_proxy", None)
 os.environ.pop("https_proxy", None)
 
-# 🛡️ Создаём httpx клиент без прокси
+# 🗭️ Создаём httpx клиент без прокси
 no_proxy_client = httpx.Client()
 
 # 🧠 Создаём OpenAI клиент
@@ -27,14 +27,14 @@ app = Flask(__name__)
 @app.route("/generate", methods=["POST"])
 def generate():
     print("📥 POST-запрос получен на /generate")
-    
+
     try:
         data = request.get_json()
         if not data:
             with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"\n❗ Нет JSON-данных в запросе от {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write(f"\n❗️ Нет JSON-данных в запросе от {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             return jsonify({"error": "Нет данных"}), 400
-            
+
         chunks = data.get("chunks", [])
 
         generated_blocks = {
@@ -43,57 +43,33 @@ def generate():
             "meta_keywords": "",
             "meta_description": "",
             "article_parts": []
-        }    
+        }
 
-        with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"\n=== Новый запрос от {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
-            f.write(f"Количество чанков: {len(chunks)}\n")
-            for i, chunk in enumerate(chunks):
-                f.write(f"--- Чанк {i} ---\n")
-                f.write(chunk[:1000] + "\n...\n")  # первые 1000 символов каждого чанка
-            
+        accumulated_article = ""
 
-        print("📥 POST-запрос получен на /generate")
-        print("=== 🧩 ПОЛУЧЕННЫЕ ДАННЫЕ ОТ СЕРВЕРА ===")
-        print(f"📦 Количество чанков: {len(chunks)}")
-        total_size = 0
-        for i, ch in enumerate(chunks):
-            ch_len = len(ch.encode('utf-8'))
-            total_size += ch_len
-            print(f"🔹 Чанк {i}: {ch_len} байт")
-        print(f"📏 Общий размер чанков: {total_size} байт")
-        print("=== 🔚 ===\n")
-
-        with open("render_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Запрос получен, чанков: {len(chunks)}, размер: {total_size} байт\n")
-
-        print("=== DISTRICT SEO BOT | АНАЛИЗ ЧАНКОВ ===")
-        total_chars = 0
-        for i, chunk in enumerate(chunks, 1):
-            chunk_text = str(chunk)
-            chunk_len = len(chunk_text)
-            total_chars += chunk_len
-            print(f"--- Чанк {i}: {chunk_len} символов ---")
-        print(f"Общий объём данных: {total_chars} символов ({total_chars / 1024:.2f} КБ)")
-        print("=== КОНЕЦ АНАЛИЗА ЧАНКОВ ===")
-
-
-        
-
-        cleaned_chunks = []
-        for chunk in chunks:
-            cleaned = re.sub(r'^https?://\S+\.(?:jpg|jpeg|png|gif)\s*$', '', chunk, flags=re.MULTILINE)
-            cleaned_chunks.append(cleaned.strip())
-
-        for i, chunk in enumerate(cleaned_chunks):
+        for i, chunk in enumerate(chunks):
             print(f"\n🔁 Создание потока для чанка {i}")
             thread = client.beta.threads.create()
-            
-            print(f"📨 Отправка чанка {i}")
+
+            if i == 0:
+                system_prompt = (
+                    "Это первая часть. Начни статью ярко и эмоционально. Не завершай статью. Дальше будут еще части."
+                )
+            elif i == len(chunks) - 1:
+                system_prompt = (
+                    "Это последняя часть. Вот что уже было сделано: \n\n" + accumulated_article +
+                    "\n\n🔹 Заверши статью логично, сделай финальный вывод."
+                )
+            else:
+                system_prompt = (
+                    "Продолжи статью с учётом того, что было написано ранее: \n\n" + accumulated_article +
+                    "\n\n🔹 Не делай выводов. Статья продолжается."
+                )
+
             client.beta.threads.messages.create(
                 thread_id=thread.id,
                 role="user",
-                content=chunk
+                content=system_prompt + "\n\n" + chunk
             )
 
             print("🚀 Запуск ассистента")
@@ -129,19 +105,18 @@ def generate():
                 generated_blocks["meta_title"] = extract_block("META_TITLE", content)
                 generated_blocks["meta_keywords"] = extract_block("META_KEYWORDS", content)
                 generated_blocks["meta_description"] = extract_block("META_DESCRIPTION", content)
-                generated_blocks["article_parts"].append(extract_block("ARTICLE", content))
+                article_part = extract_block("ARTICLE", content)
             else:
-                generated_blocks["article_parts"].append(extract_block("ARTICLE", content))
-                
-            # ⏸️ Пауза между чанками
+                article_part = extract_block("ARTICLE", content)
+
+            generated_blocks["article_parts"].append(article_part)
+            accumulated_article += "\n\n" + article_part
+
             time.sleep(5)
 
-        print("=== 📥 ОТВЕТ ОТ OPENAI ===")
-        print(content[:1000] + "\n...")  # первые 1000 символов
-        print("=== 🔚 ===")
-        
-
-        
+        print("=== 📅 ОТВЕТ ОТ OPENAI ===")
+        print(content[:1000] + "\n...")
+        print("=== 🖚 ===")
 
         result = {
             "element_name": generated_blocks["element_name"],
@@ -150,15 +125,15 @@ def generate():
             "meta_description": generated_blocks["meta_description"],
             "article": "\n\n".join(generated_blocks["article_parts"])
         }
+
         with open("render_debug.log", "a", encoding="utf-8") as f:
             f.write(f"\n=== Финальный результат от {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
-            f.write(f"Название элемента: {result['element_name']}\n")
+            f.write(f"Название: {result['element_name']}\n")
             f.write(f"META TITLE: {result['meta_title']}\n")
-            f.write(f"META DESCRIPTION: {result['meta_description']}\n")
-            f.write(f"META KEYWORDS: {result['meta_keywords']}\n")
-            f.write("Тело статьи (первые 1000 символов):\n")
-            f.write(result["article"][:1000] + "\n...\n")
-            
+            f.write(f"META DESC: {result['meta_description']}\n")
+            f.write(f"META KEYS: {result['meta_keywords']}\n")
+            f.write("ARTICLE: " + result["article"][:1000] + "\n...\n")
+
         return jsonify(result)
 
     except Exception as e:
@@ -168,4 +143,4 @@ def generate():
 
 if __name__ == "__main__":
     print("🟢 Flask сервер запущен. Ожидаем запросы...")
-    app.run(host="0.0.0.0", port=10000) 
+    app.run(host="0.0.0.0", port=10000)
