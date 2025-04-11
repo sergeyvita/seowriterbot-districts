@@ -32,6 +32,10 @@ def generate():
     try:
         try:
             data = request.get_json(force=True)
+            with open("render_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"\n=== 📥 Поступил запрос {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
+                f.write(json.dumps(data, ensure_ascii=False, indent=2))
+                
             print("📦 Полученные данные:\n", data)
         except Exception as e:
             error_msg = f"\n❗️ Ошибка при парсинге JSON: {str(e)} — {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
@@ -56,12 +60,19 @@ def generate():
         accumulated_article = ""
 
         chunks = [c for c in chunks if isinstance(c, str) and c.strip()]
+        with open("render_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"\n=== ✅ Фильтрованные чанки ({len(chunks)}): ===\n")
+            for idx, c in enumerate(chunks):
+                f.write(f"\n--- Чанк {idx} (первые 300 символов): ---\n{c[:300]}\n...\n")
+            
         if not chunks:
             return jsonify({"error": "Все чанки были пустыми или некорректными"}), 400
 
         for i, chunk in enumerate(chunks):
             print(f"\n🔁 Создание потока для чанка {i}")
             thread = client.beta.threads.create()
+            with open("render_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"\n🔁 Поток {i}: создан thread_id={thread.id}\n")
 
             if i == 0:
                 system_prompt = (
@@ -79,6 +90,10 @@ def generate():
                 )
 
             print(f"📄 Чанк {i}: {chunk[:200]}...\n")
+
+            with open("render_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"\n📝 Отправка чанка {i} ассистенту. prompt:\n{system_prompt[:500]}...\n")
+                f.write(f"\n🔹 Содержимое чанка:\n{chunk[:1000]}...\n")
 
             client.beta.threads.messages.create(
                 thread_id=thread.id,
@@ -110,6 +125,11 @@ def generate():
             messages = client.beta.threads.messages.list(thread_id=thread.id)
             if not messages.data or not messages.data[0].content:
                 raise Exception(f"Нет контента в ответе на чанк {i}")
+
+            with open("render_debug.log", "a", encoding="utf-8") as f:
+                f.write(f"\n📨 Ответ на чанк {i} (первые 1000 символов):\n{article_part[:1000]}\n...\n")
+
+            
             
             
             # 🧠 Ищем JSON-ответ от ассистента с ключами blocks, meta и т.д.
@@ -175,6 +195,13 @@ def generate():
         print(content[:1000] + "\n...")
         print("=== 🖚 ===")
 
+
+        with open("render_debug.log", "a", encoding="utf-8") as f:
+                f.write("\n=== 📦 Сбор финального JSON ===\n")
+                f.write(f"Заголовок: {generated_blocks['element_name']}\n")
+                f.write(f"META TITLE: {generated_blocks['meta_title']}\n")
+                f.write(f"ARTICLE preview: {accumulated_article[:1000]}\n...\n")
+            
         result = {
             "element_name": generated_blocks["element_name"],
             "meta_title": generated_blocks["meta_title"],
