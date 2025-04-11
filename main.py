@@ -30,9 +30,12 @@ def generate():
 
     try:
         data = request.get_json(force=True)
+        print("🟡 JSON парсится успешно")
     except Exception as e:
+        error_msg = f"\n❗️ Ошибка при парсинге JSON: {str(e)} — {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+        print(error_msg)
         with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
-            f.write(f"\n❗️ Ошибка при парсинге JSON: {str(e)} — {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(error_msg)
         return jsonify({"error": "Ошибка парсинга JSON"}), 400
         
         if not data:
