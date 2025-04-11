@@ -102,7 +102,17 @@ def generate():
             messages = client.beta.threads.messages.list(thread_id=thread.id)
             if not messages.data or not messages.data[0].content:
                 raise Exception(f"Нет контента в ответе на чанк {i}")
-            content = messages.data[0].content[0].text.value.strip()    
+            # Ищем первое текстовое сообщение от ассистента
+            content = ""
+            for msg in messages.data:
+                for item in msg.content:
+                    if hasattr(item, "text") and hasattr(item.text, "value"):
+                        content_candidate = item.text.value.strip()
+                        if "ARTICLE" in content_candidate or "ELEMENT_NAME" in content_candidate:
+                            content = content_candidate
+                            break
+                    if content:
+                        break
 
             with open("debug_chunks_output.log", "a", encoding="utf-8") as f:
                 f.write(f"\n=== Чанк {i} ===\n{content[:1000]}\n...\n")
