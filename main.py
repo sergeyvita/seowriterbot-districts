@@ -1,3 +1,4 @@
+import json
 import subprocess
 import os
 import re
@@ -109,17 +110,39 @@ def generate():
             messages = client.beta.threads.messages.list(thread_id=thread.id)
             if not messages.data or not messages.data[0].content:
                 raise Exception(f"Нет контента в ответе на чанк {i}")
-            # Ищем первое текстовое сообщение от ассистента
+            
+            
+            # 🧠 Ищем JSON-ответ от ассистента с ключами blocks, meta и т.д.
             content = ""
+            article_part = ""
             for msg in messages.data:
                 for item in msg.content:
                     if hasattr(item, "text") and hasattr(item.text, "value"):
-                        content_candidate = item.text.value.strip()
-                        if "ARTICLE" in content_candidate or "ELEMENT_NAME" in content_candidate:
-                            content = content_candidate
-                            break
-                    if content:
-                        break
+                        text_value = item.text.value.strip()
+
+                        try:
+                            parsed = json.loads(text_value)
+                            if isinstance(parsed, dict) and "blocks" in parsed:
+                                print("✅ Найден JSON с блоками!")
+
+                                # Только для первого чанка — сохраняем всё
+                                if i == 0:
+                                    generated_blocks["element_name"] = parsed.get("element_name", "")
+                                    generated_blocks["meta_title"] = parsed.get("meta_title", "")
+                                    generated_blocks["meta_keywords"] = parsed.get("meta_keywords", "")
+                                    generated_blocks["meta_description"] = parsed.get("meta_description", "")
+
+                                blocks = parsed.get("blocks", {})
+                                article_part = "\n\n".join(blocks.values())
+                                break  # нашли нужное, можно выходить
+                        except Exception as e:
+                            print(f"⚠️ Ошибка при JSON-декодировании: {e}")
+                if article_part:
+                    break
+                    
+                            
+                                    
+                          
 
             with open("debug_chunks_output.log", "a", encoding="utf-8") as f:
                 f.write(f"\n=== Чанк {i} ===\n{content[:1000]}\n...\n")
