@@ -47,6 +47,10 @@ def generate():
 
         accumulated_article = ""
 
+        chunks = [c for c in chunks if isinstance(c, str) and c.strip()]
+        if not chunks:
+            return jsonify({"error": "Все чанки были пустыми или некорректными"}), 400
+
         for i, chunk in enumerate(chunks):
             print(f"\n🔁 Создание потока для чанка {i}")
             thread = client.beta.threads.create()
@@ -65,6 +69,8 @@ def generate():
                     "Продолжи статью с учётом того, что было написано ранее: \n\n" + accumulated_article +
                     "\n\n🔹 Не делай выводов. Статья продолжается."
                 )
+
+            print(f"📄 Чанк {i}: {chunk[:200]}...\n")
 
             client.beta.threads.messages.create(
                 thread_id=thread.id,
@@ -94,7 +100,12 @@ def generate():
 
             print("📬 Получение ответа от ассистента")
             messages = client.beta.threads.messages.list(thread_id=thread.id)
-            content = messages.data[0].content[0].text.value.strip()
+            if not messages.data or not messages.data[0].content:
+                raise Exception(f"Нет контента в ответе на чанк {i}")
+            content = messages.data[0].content[0].text.value.strip()    
+
+            with open("debug_chunks_output.log", "a", encoding="utf-8") as f:
+                f.write(f"\n=== Чанк {i} ===\n{content[:1000]}\n...\n")
 
             def extract_block(tag, text):
                 match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", text, re.DOTALL)
