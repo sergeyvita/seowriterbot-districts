@@ -151,14 +151,17 @@ def generate():
                 match = re.search(rf"==={tag}===\s*(.+?)(?=(?:===|$))", text, re.DOTALL)
                 return match.group(1).strip() if match else ""
 
-            if i == 0:
-                generated_blocks["element_name"] = extract_block("ELEMENT_NAME", content)
-                generated_blocks["meta_title"] = extract_block("META_TITLE", content)
-                generated_blocks["meta_keywords"] = extract_block("META_KEYWORDS", content)
-                generated_blocks["meta_description"] = extract_block("META_DESCRIPTION", content)
-                article_part = extract_block("ARTICLE", content)
-            else:
-                article_part = extract_block("ARTICLE", content)
+            
+            # Только если article_part не был получен через JSON → пробуем legacy-метод
+            if not article_part:
+                if i == 0:
+                    generated_blocks["element_name"] = extract_block("ELEMENT_NAME", content)
+                    generated_blocks["meta_title"] = extract_block("META_TITLE", content)
+                    generated_blocks["meta_keywords"] = extract_block("META_KEYWORDS", content)
+                    generated_blocks["meta_description"] = extract_block("META_DESCRIPTION", content)
+                    article_part = extract_block("ARTICLE", content)
+                else:
+                    article_part = extract_block("ARTICLE", content)
 
             generated_blocks["article_parts"].append(article_part)
             
