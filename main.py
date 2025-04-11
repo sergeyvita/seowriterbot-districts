@@ -29,7 +29,12 @@ def generate():
     print("📥 POST-запрос получен на /generate")
 
     try:
-        data = request.get_json()
+        data = request.get_json(force=True)
+    except Exception as e:
+        with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"\n❗️ Ошибка при парсинге JSON: {str(e)} — {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        return jsonify({"error": "Ошибка парсинга JSON"}), 400
+        
         if not data:
             with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
                 f.write(f"\n❗️ Нет JSON-данных в запросе от {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
