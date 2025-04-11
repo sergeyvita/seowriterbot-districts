@@ -29,18 +29,17 @@ def generate():
     print("📥 POST-запрос получен на /generate")
 
     try:
-        data = request.get_json(force=True)
-        print("🟡 JSON парсится успешно")
-    except Exception as e:
-        error_msg = f"\n❗️ Ошибка при парсинге JSON: {str(e)} — {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
-        print(error_msg)
-        with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
-            f.write(error_msg)
-        return jsonify({"error": "Ошибка парсинга JSON"}), 400
-        
+        try:
+            data = request.get_json(force=True)
+            print("📦 Полученные данные:\n", data)
+        except Exception as e:
+            error_msg = f"\n❗️ Ошибка при парсинге JSON: {str(e)} — {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            print(error_msg)
+            return jsonify({"error": "Ошибка парсинга JSON", "details": str(e)}), 400
+                   
         if not data:
-            with open("incoming_chunks_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"\n❗️ Нет JSON-данных в запросе от {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            msg = f"\n‼️ Нет JSON-данных в запросе от {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            print(msg)
             return jsonify({"error": "Нет данных"}), 400
 
         chunks = data.get("chunks", [])
@@ -169,8 +168,8 @@ def generate():
         return jsonify(result)
 
     except Exception as e:
-        print(f"❌ ОШИБКА: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        print(f"❌ Глобальная ошибка в generate(): {str(e)}")
+        return jsonify({"error": "Внутренняя ошибка сервера", "details": str(e)}), 500
 
 
 if __name__ == "__main__":
