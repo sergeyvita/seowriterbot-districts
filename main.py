@@ -131,7 +131,10 @@ def generate():
                 article_part = extract_block("ARTICLE", content)
 
             generated_blocks["article_parts"].append(article_part)
-            accumulated_article += "\n\n" + article_part
+            
+            # Не добавляем контекстный чанк (index 1) в accumulated_article
+            if i != 1:
+                accumulated_article += "\n\n" + article_part
 
             time.sleep(5)
 
