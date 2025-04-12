@@ -88,7 +88,7 @@ def generate():
                 if previous_text:
                     system_prompt += "=== Предыдущая часть статьи ===\n" + previous_text + "\n\n"
                     
-        if reference_chunk:
+            if reference_chunk:
                system_prompt += "=== Справочная информация ===\n" + reference_chunk + "\n\n"
 
             print(f"📄 Чанк {i}: {chunk[:200]}...\n")
