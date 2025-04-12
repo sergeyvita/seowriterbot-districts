@@ -161,8 +161,8 @@ def generate():
                         except Exception as e:
                             print(f"⚠️ Ошибка при JSON-декодировании: {e}")
 
-            if article_part:
-                break
+                if article_part:
+                    break
 
             with open("debug_chunks_output.log", "a", encoding="utf-8") as f:
                 f.write(f"\n=== Чанк {i} ===\n{content[:1000]}\n...\n")
