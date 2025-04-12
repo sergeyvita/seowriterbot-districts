@@ -127,7 +127,8 @@ def generate():
                 raise Exception(f"Нет контента в ответе на чанк {i}")
 
             with open("render_debug.log", "a", encoding="utf-8") as f:
-                f.write(f"\n📨 Ответ на чанк {i} (первые 1000 символов):\n{article_part[:1000]}\n...\n")
+                f.write(f"\n📨 Ответ на чанк {i} (первые 1000 символов):\n")
+                f.write(article_part[:1000] + "\n...\n" if 'article_part' in locals() and article_part else "❌ article_part пустой\n")
 
             
             
@@ -135,17 +136,18 @@ def generate():
             # 🧠 Ищем JSON-ответ от ассистента с ключами blocks, meta и т.д.
             content = ""
             article_part = ""
+            
             for msg in messages.data:
                 for item in msg.content:
                     if hasattr(item, "text") and hasattr(item.text, "value"):
                         text_value = item.text.value.strip()
-
+                        content += text_value + "\n\n"
+                        
                         try:
                             parsed = json.loads(text_value)
                             if isinstance(parsed, dict) and "blocks" in parsed:
                                 print("✅ Найден JSON с блоками!")
-
-                                # Только для первого чанка — сохраняем всё
+                                
                                 if i == 0:
                                     generated_blocks["element_name"] = parsed.get("element_name", "")
                                     generated_blocks["meta_title"] = parsed.get("meta_title", "")
@@ -154,15 +156,13 @@ def generate():
 
                                 blocks = parsed.get("blocks", {})
                                 article_part = "\n\n".join(blocks.values())
-                                break  # нашли нужное, можно выходить
+                                break  # прерываем внутренний цикл
+
                         except Exception as e:
                             print(f"⚠️ Ошибка при JSON-декодировании: {e}")
-                if article_part:
-                    break
-                    
-                            
-                                    
-                          
+
+            if article_part:
+                break
 
             with open("debug_chunks_output.log", "a", encoding="utf-8") as f:
                 f.write(f"\n=== Чанк {i} ===\n{content[:1000]}\n...\n")
