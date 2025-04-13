@@ -56,7 +56,12 @@ def generate():
             thread_id=thread.id,
             role="user",
             content=prompt,
-            attachments=[{"file_id": file_id}]
+            attachments=[
+                {
+                    "file_id": file_id,
+                    "tools": [{"type": "file_search"}]
+                }
+            ]    
         )
 
         # Запускаем ассистента (без file_ids!)
