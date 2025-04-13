@@ -49,8 +49,8 @@ def generate():
                     file_response = client.files.create(file=f, purpose="assistants")
 
                 file_ids.append(file_response.id)
-                print(f"📎 Файл загружен: {file_response.id}")
-                os.remove(temp_path)
+                print(f"⚠️ Ошибка загрузки файла: {e}")
+                return jsonify({"error": f"Не удалось загрузить файл: {str(e)}"}), 500
 
             if not file_ids:
                 return jsonify({"error": "Не удалось загрузить ни один файл"}), 500
@@ -82,6 +82,7 @@ def generate():
                 print(f"🧹 Файл {file_id} удалён")
             except Exception as e:
                 print(f"⚠️ Ошибка удаления файла {file_id}: {e}")
+                return jsonify({"error": f"Ошибка при удалении файла: {str(e)}"}), 500
 
         # Запускаем ассистента
         run = client.beta.threads.runs.create(
@@ -92,12 +93,20 @@ def generate():
 
         # Ждём завершения
         while True:
-            run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
-            if run_status.status == "completed":
-                break
-            elif run_status.status == "failed":
-                return jsonify({"error": "Ассистент не справился"}), 500
-            time.sleep(1)
+            try:
+                run_status = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
+                print(f"📊 Статус потока: {run_status.status}")
+                if run_status.status == "completed":
+                    break
+                elif run_status.status == "failed":
+                    print("⚠️ Поток завершился с ошибкой.")
+                    return jsonify({"error": "Ассистент не справился"}), 500
+                time.sleep(1)
+                
+            except Exception as e:
+                print(f"❌ Ошибка при получении статуса потока: {e}")
+                return jsonify({"error": f"Ошибка при получении статуса потока: {str(e)}"}), 500
+        
 
         # Получаем ответ
         messages = client.beta.threads.messages.list(thread_id=thread_id)
