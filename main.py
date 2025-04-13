@@ -25,12 +25,15 @@ def generate():
     try:
         print("📥 Запрос на /generate")
 
+        init = request.form.get("init", "false").lower() == "true"
+        delete_file = request.form.get("delete", "false").lower() == "true"
         prompt = request.form.get("prompt", "").strip()
-        delete_after = request.form.get("delete_after", "true").lower() == "true"
+        thread_id = request.form.get("thread_id", "").strip()
+        file_id = request.form.get("file_id", "").strip()
 
         
 
-        uploaded_files = [file for key, file in request.files.items() if key.startswith("context_file")]
+        
 
         if not uploaded_files:
             return jsonify({"error": "Файлы context_file[] не переданы"}), 400
@@ -54,22 +57,45 @@ def generate():
 
         if not file_ids:
             return jsonify({"error": "Не удалось загрузить ни один файл"}), 500
+
+
        
 
-        # Создаем thread
+        if not file_ids:
+            return jsonify({"error": "Не удалось загрузить ни один файл"}), 500
+
         thread = client.beta.threads.create()
         print(f"🧵 Thread создан: {thread.id}")
 
-        # Отправляем сообщение с prompt и прикреплённым файлом
+        if init:
+            return jsonify({ "thread_id": thread.id, "file_id": file_ids[0] })
+
+        return jsonify({"thread_id": thread.id, "file_id": file_ids[0]})
+       
+
+        
+        if not thread_id or not file_id:
+            return jsonify({"error": "Не передан thread_id или file_id"}), 400
+        
         client.beta.threads.messages.create(
-            thread_id=thread.id,
+            thread_id=thread_id,
             role="user",
             content=prompt,
-            
             attachments=[
-                {"file_id": fid, "tools": [{"type": "file_search"}]} for fid in file_ids
-            ]    
+                {"file_id": file_id, "tools": [{"type": "file_search"}]}
+            ]
         )
+        print(f"📨 Prompt отправлен в thread {thread_id}")
+
+        if delete_file and file_id:
+            try:
+                client.files.delete(file_id)
+                print(f"🧹 Файл {file_id} удалён")
+                return jsonify({"status": "deleted", "file_id": file_id})
+            except Exception as e:
+                return jsonify({"error": "Ошибка удаления файла", "details": str(e)}), 500
+
+        
 
         # Запускаем ассистента (без file_ids!)
         run = client.beta.threads.runs.create(
