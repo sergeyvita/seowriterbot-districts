@@ -51,20 +51,21 @@ def generate():
         thread = client.beta.threads.create()
         print(f"🧵 Thread создан: {thread.id}")
 
-        # Отправляем сообщение с prompt
+        # Отправляем сообщение с prompt и прикреплённым файлом
         client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
-            content=prompt
+            content=prompt,
+            attachments=[{"file_id": file_id}]
         )
 
-        # Запускаем ассистента
+        # Запускаем ассистента (без file_ids!)
         run = client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=ASSISTANT_ID,
-            file_ids=[file_id],
             extra_headers={"OpenAI-Beta": "assistants=v2"}
-        )
+        )    
+        
 
         # Ждем завершения
         while True:
