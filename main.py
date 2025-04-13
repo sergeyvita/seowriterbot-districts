@@ -28,24 +28,33 @@ def generate():
         prompt = request.form.get("prompt", "").strip()
         delete_after = request.form.get("delete_after", "true").lower() == "true"
 
-        if 'context_file' not in request.files:
-            return jsonify({"error": "context_file не передан"}), 400
+        
 
-        uploaded_file = request.files['context_file']
-        if uploaded_file.filename == "":
-            return jsonify({"error": "Пустое имя файла"}), 400
+        uploaded_files = [file for key, file in request.files.items() if key.startswith("context_file")]
 
-        # Сохраняем файл временно
-        temp_path = f"/tmp/{int(time.time())}_{uploaded_file.filename}"
-        uploaded_file.save(temp_path)
+        if not uploaded_files:
+            return jsonify({"error": "Файлы context_file[] не переданы"}), 400
 
-        # Загружаем файл на OpenAI
-        with open(temp_path, "rb") as f:
-            file_response = client.files.create(file=f, purpose="assistants")
 
-        file_id = file_response.id
-        print(f"📎 Файл загружен: {file_id}")
-        os.remove(temp_path)
+        file_ids = []
+        
+        for i, uploaded_file in enumerate(uploaded_files):
+            if uploaded_file.filename == "":
+                continue
+
+            temp_path = f"/tmp/{int(time.time())}_{i}_{uploaded_file.filename}"
+            uploaded_file.save(temp_path)
+
+            with open(temp_path, "rb") as f:
+                file_response = client.files.create(file=f, purpose="assistants")
+
+            file_ids.append(file_response.id)
+            print(f"📎 Файл загружен: {file_response.id}")
+            os.remove(temp_path)
+
+        if not file_ids:
+            return jsonify({"error": "Не удалось загрузить ни один файл"}), 500
+       
 
         # Создаем thread
         thread = client.beta.threads.create()
@@ -56,11 +65,9 @@ def generate():
             thread_id=thread.id,
             role="user",
             content=prompt,
+            
             attachments=[
-                {
-                    "file_id": file_id,
-                    "tools": [{"type": "file_search"}]
-                }
+                {"file_id": fid, "tools": [{"type": "file_search"}]} for fid in file_ids
             ]    
         )
 
@@ -105,11 +112,12 @@ def generate():
 
         # Удаляем файл
         if delete_after:
-            try:
-                client.files.delete(file_id)
-                print(f"🧹 Файл {file_id} удалён")
-            except Exception as e:
-                print(f"⚠️ Ошибка удаления файла: {e}")
+            for fid in file_ids:
+                try:
+                    client.files.delete(fid)
+                    print(f"🧹 Файл {fid} удалён")
+                except Exception as e:
+                    print(f"⚠️ Ошибка удаления файла {fid}: {e}")
 
         return jsonify(result)
 
