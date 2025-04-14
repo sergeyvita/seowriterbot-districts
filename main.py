@@ -61,7 +61,8 @@ def generate():
 
         # === Этап INIT: загрузка файла и создание потока ===
         if init:
-            uploaded_files = [file for key, file in request.files.items() if key.startswith("context_file")]
+            uploaded_files = list(request.files.values())
+
 
             if not uploaded_files:
                 logger.error("Файлы context_file[] не переданы")
