@@ -59,9 +59,13 @@ def generate():
         thread_id = request.form.get("thread_id", "").strip()
         file_id = request.form.get("file_id", "").strip()
 
-        # === Этап INIT: загрузка файла и создание потока ===
         if init:
-            uploaded_files = list(request.files.values())
+            uploaded_files = []
+            for i in range(20):  # поддержка до 20 файлов context_file[0]...context_file[19]
+                file_key = f"context_file[{i}]"
+                if file_key in request.files:
+                    uploaded_files.append(request.files[file_key])
+        
 
 
             if not uploaded_files:
