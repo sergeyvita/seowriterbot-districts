@@ -53,7 +53,7 @@ def generate():
     try:
         logger.info("📥 Запрос на /generate")
 
-        init = request.form.get("init", "false").lower() == "true"
+        init = request.values.get("init", "false").lower() == "true"
         delete_file = request.form.get("delete", "false").lower() == "true"
         prompt = request.form.get("prompt", "").strip()
         thread_id = request.form.get("thread_id", "").strip()
