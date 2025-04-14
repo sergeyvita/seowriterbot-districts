@@ -23,6 +23,31 @@ client = OpenAI(
 ASSISTANT_ID = os.environ.get("ASSISTANT_ID")
 app = Flask(__name__)
 
+@app.route("/upload", methods=["POST"])
+def upload_file():
+    try:
+        uploaded_file = request.files.get('file')
+        if not uploaded_file or uploaded_file.filename == "":
+            logger.error("Файл не передан")
+            return jsonify({"error": "Файл не передан"}), 400
+
+        temp_path = f"/tmp/{int(time.time())}_{uploaded_file.filename}"
+        uploaded_file.save(temp_path)
+
+        with open(temp_path, "rb") as f:
+            file_response = client.files.create(file=f, purpose="assistants")
+
+        os.remove(temp_path)
+        logger.info(f"✅ Файл загружен: {file_response.id}")
+
+        return jsonify({"file_id": file_response.id})
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка в upload_file(): {e}")
+        return jsonify({"error": "Ошибка загрузки", "details": str(e)}), 500
+
+
+
 @app.route("/generate", methods=["POST"])
 def generate():
     try:
@@ -72,6 +97,8 @@ def generate():
             logger.error("Не передан thread_id или file_id")
             return jsonify({"error": "Не передан thread_id или file_id"}), 400
 
+        logger.info(f"Отправка сообщения в thread {thread_id} с file_id={file_id} и prompt={prompt}")
+        
         # Отправляем prompt с привязкой к файлу
         client.beta.threads.messages.create(
             thread_id=thread_id,
