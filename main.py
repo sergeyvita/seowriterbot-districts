@@ -35,6 +35,8 @@ def upload_file():
         uploaded_file.save(temp_path)
 
         with open(temp_path, "rb") as f:
+            contents = f.read(200)
+            logger.debug(f"🔍 Первые 200 байт содержимого файла: {contents[:200]}")
             file_response = client.files.create(file=f, purpose="assistants")
 
         os.remove(temp_path)
