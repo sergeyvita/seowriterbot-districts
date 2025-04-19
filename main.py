@@ -175,5 +175,23 @@ def generate():
         logger.error(f"❌ Ошибка в generate(): {e}")
         return jsonify({"error": "Ошибка сервера", "details": str(e)}), 500
 
+@app.route("/delete_file", methods=["POST"])
+def delete_file():
+    try:
+        data = request.get_json(force=True)   # ждём JSON: {"file_id": "file‑abc123"}
+        file_id = data.get("file_id", "").strip()
+
+        if not file_id:
+            return jsonify({"error": "file_id обязателен"}), 400
+
+        client.files.delete(file_id)           # собственно удаление
+        logger.info(f"🗑️  Файл {file_id} удалён")
+
+        return jsonify({"status": "ok"}), 200
+
+    except Exception as e:
+        logger.error(f"⚠️  Ошибка удаления файла {file_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
